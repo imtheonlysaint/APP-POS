@@ -194,18 +194,18 @@ const ProductsTab: React.FC = () => {
         actions={<Button size="sm" onClick={openAdd}>+ Tambah Produk</Button>}
       />
 
-      <Modal isOpen={isOpen} onClose={() => { setIsOpen(false); resetForm(); }} title={editing ? 'Edit Produk' : 'Tambah Produk'} size="lg">
-        <div className="grid gap-4 lg:grid-cols-2">
-          <div className="space-y-3">
+      <Modal isOpen={isOpen} onClose={() => { setIsOpen(false); resetForm(); }} title={editing ? 'Edit Produk' : 'Tambah Produk'} size="xl">
+        <div className="grid gap-8 md:grid-cols-2">
+          <div className="space-y-4">
             <FormRow label="Nama Produk *">
-              <Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
+              <Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} className="h-10 text-sm" />
             </FormRow>
             <FormRow label="Deskripsi">
-              <Textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} />
+              <Textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} className="min-h-[100px] text-sm" />
             </FormRow>
             <FormRow label="Kategori">
               <Select value={form.categoryId || NONE_VALUE} onValueChange={value => setForm(f => ({ ...f, categoryId: value === NONE_VALUE ? '' : value }))}>
-                <SelectTrigger>
+                <SelectTrigger className="h-10 text-sm">
                   <SelectValue placeholder="Pilih kategori" />
                 </SelectTrigger>
                 <SelectContent>
@@ -215,31 +215,31 @@ const ProductsTab: React.FC = () => {
               </Select>
             </FormRow>
             <FormRow label={editing ? 'Ganti Gambar (opsional)' : 'Gambar Produk *'}>
-              <Input type="file" accept="image/*" onChange={handleImageChange} className="cursor-pointer file:mr-3 file:rounded-md file:border-0 file:bg-secondary file:px-3 file:py-1 file:text-xs file:font-semibold file:text-secondary-foreground" />
+              <Input type="file" accept="image/*" onChange={handleImageChange} className="h-10 cursor-pointer text-sm file:mr-3 file:rounded-md file:border-0 file:bg-secondary file:px-3 file:py-1 file:text-xs file:font-semibold file:text-secondary-foreground" />
             </FormRow>
-            {imagePreview && <img src={imagePreview} alt="preview" className="mt-2 h-36 w-full rounded-md border object-cover" />}
+            {imagePreview && <img src={imagePreview} alt="preview" className="mt-2 h-48 w-full rounded-md border object-cover shadow-sm" />}
           </div>
 
-          <div className="space-y-3">
+          <div className="space-y-4">
             <div className="flex items-center justify-between gap-3">
-              <label className="text-sm font-medium text-foreground">Varian Produk *</label>
-              <Button type="button" size="sm" onClick={addVariant}>+ Varian</Button>
+              <label className="text-sm font-bold text-foreground">Varian Produk *</label>
+              <Button type="button" size="sm" onClick={addVariant} className="h-9">+ Tambah Varian</Button>
             </div>
-            <div className="max-h-[360px] space-y-3 overflow-y-auto pr-1">
+            <div className="max-h-[60vh] space-y-4 overflow-y-auto pr-2">
               {variants.map((v, i) => (
-                <div key={i} className="rounded-md border bg-card p-3 shadow-sm">
-                  <div className="mb-3 flex items-center justify-between gap-3">
-                    <span className="text-xs font-semibold text-muted-foreground">Varian #{i + 1}</span>
-                    {variants.length > 1 && <Button type="button" size="sm" variant="ghost" className="h-7 px-2 text-destructive hover:text-destructive" onClick={() => removeVariant(i)}>Hapus</Button>}
+                <div key={i} className="rounded-lg border bg-card p-4 shadow-sm transition-all hover:border-primary/30">
+                  <div className="mb-4 flex items-center justify-between gap-3 border-b pb-2">
+                    <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Varian #{i + 1}</span>
+                    {variants.length > 1 && <Button type="button" size="xs" variant="ghost" className="text-destructive hover:bg-destructive/10 hover:text-destructive" onClick={() => removeVariant(i)}>Hapus</Button>}
                   </div>
-                  <div className="grid gap-2 sm:grid-cols-2">
-                    <div className="space-y-1"><label className="text-xs font-medium text-muted-foreground">SKU *</label><Input value={v.sku} onChange={e => updateVariant(i, 'sku', e.target.value)} /></div>
-                    <div className="space-y-1"><label className="text-xs font-medium text-muted-foreground">Harga *</label><Input type="number" value={v.price} onChange={e => updateVariant(i, 'price', e.target.value)} /></div>
-                    <div className="space-y-1"><label className="text-xs font-medium text-muted-foreground">Barcode</label><Input value={v.barcode} onChange={e => updateVariant(i, 'barcode', e.target.value)} /></div>
-                    <div className="space-y-1"><label className="text-xs font-medium text-muted-foreground">Diskon Member (%)</label><Input type="number" value={v.memberDiscountRate} onChange={e => updateVariant(i, 'memberDiscountRate', e.target.value)} /></div>
-                    <div className="space-y-1"><label className="text-xs font-medium text-muted-foreground">Ukuran</label>
+                  <div className="grid gap-x-4 gap-y-3 sm:grid-cols-2">
+                    <div className="space-y-1"><label className="text-[11px] font-bold uppercase text-muted-foreground">SKU *</label><Input value={v.sku} onChange={e => updateVariant(i, 'sku', e.target.value)} className="h-9 text-sm" /></div>
+                    <div className="space-y-1"><label className="text-[11px] font-bold uppercase text-muted-foreground">Harga *</label><Input type="number" value={v.price} onChange={e => updateVariant(i, 'price', e.target.value)} className="h-9 text-sm" /></div>
+                    <div className="space-y-1"><label className="text-[11px] font-bold uppercase text-muted-foreground">Barcode</label><Input value={v.barcode} onChange={e => updateVariant(i, 'barcode', e.target.value)} className="h-9 text-sm" /></div>
+                    <div className="space-y-1"><label className="text-[11px] font-bold uppercase text-muted-foreground">Diskon Member (%)</label><Input type="number" value={v.memberDiscountRate} onChange={e => updateVariant(i, 'memberDiscountRate', e.target.value)} className="h-9 text-sm" /></div>
+                    <div className="space-y-1"><label className="text-[11px] font-bold uppercase text-muted-foreground">Ukuran</label>
                       <Select value={v.size || NONE_VALUE} onValueChange={value => updateVariant(i, 'size', value === NONE_VALUE ? '' : value)}>
-                        <SelectTrigger><SelectValue placeholder="Pilih ukuran" /></SelectTrigger>
+                        <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Pilih ukuran" /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value={NONE_VALUE}>Tanpa ukuran</SelectItem>
                           <SelectItem value="SMALL">Small</SelectItem>
@@ -248,9 +248,9 @@ const ProductsTab: React.FC = () => {
                         </SelectContent>
                       </Select>
                     </div>
-                    <div className="space-y-1"><label className="text-xs font-medium text-muted-foreground">Suhu</label>
+                    <div className="space-y-1"><label className="text-[11px] font-bold uppercase text-muted-foreground">Suhu</label>
                       <Select value={v.temperature || NONE_VALUE} onValueChange={value => updateVariant(i, 'temperature', value === NONE_VALUE ? '' : value)}>
-                        <SelectTrigger><SelectValue placeholder="Pilih suhu" /></SelectTrigger>
+                        <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Pilih suhu" /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value={NONE_VALUE}>Tanpa suhu</SelectItem>
                           <SelectItem value="HOT">Hot</SelectItem>
@@ -265,12 +265,13 @@ const ProductsTab: React.FC = () => {
           </div>
         </div>
 
-        <div className="mt-4 flex justify-end gap-2 border-t pt-4">
-          <Button type="button" variant="outline" onClick={() => { setIsOpen(false); resetForm(); }}>Batal</Button>
+        <div className="mt-6 flex justify-end gap-3 border-t pt-4">
+          <Button type="button" variant="outline" onClick={() => { setIsOpen(false); resetForm(); }} className="h-10 px-6">Batal</Button>
           <Button
             type="button"
             onClick={() => saveMutation.mutate()}
             disabled={!form.name || (!editing && !imageFile) || variants.some(v => !v.sku || !v.price) || saveMutation.isPending}
+            className="h-10 px-8 font-bold"
           >
             {saveMutation.isPending ? 'Menyimpan...' : 'Simpan Produk'}
           </Button>

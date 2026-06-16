@@ -12,7 +12,7 @@ interface ModalProps {
   onClose: () => void;
   title: string;
   children: React.ReactNode;
-  size?: 'sm' | 'md' | 'lg';
+  size?: 'sm' | 'md' | 'lg' | 'xl' | 'full';
 }
 
 const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, size = 'md' }) => {
@@ -34,16 +34,18 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, size = 
   }, [isOpen, onClose]);
 
   const widths = {
-    sm: 'max-w-md',
-    md: 'max-w-2xl',
-    lg: 'max-w-4xl',
+    sm: 'sm:max-w-md',
+    md: 'sm:max-w-3xl',
+    lg: 'sm:max-w-5xl',
+    xl: 'sm:max-w-7xl',
+    full: 'max-w-[98vw] w-full h-[96vh]',
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
       <DialogContent
         className={cn(
-          'flex max-h-[90vh] flex-col overflow-hidden p-0',
+          'flex max-h-[96vh] flex-col overflow-hidden p-0',
           widths[size],
         )}
       >

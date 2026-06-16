@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ShoppingCart, LogOut, LayoutDashboard, Search, Barcode, X, Plus, Minus, Trash2, PackageSearch, Bell } from 'lucide-react';
+import { ShoppingCart, LogOut, LayoutDashboard, Search, Barcode, X, Plus, Minus, Trash2, PackageSearch, Bell, Banknote, CreditCard, Wallet } from 'lucide-react';
 import { toast } from 'sonner';
 import api, { productsApi, membersApi, ordersApi, SERVER_URL } from '../api/api';
 import { useAuth } from '../hooks/useAuth';
@@ -48,6 +48,7 @@ type RecentNotification = {
   title: string;
   description: string;
   time: string;
+  timestamp: number;
 };
 
 const POS: React.FC = () => {
@@ -63,7 +64,21 @@ const POS: React.FC = () => {
   const [memberSearch, setMemberSearch] = useState('');
   const [showMemberDropdown, setShowMemberDropdown] = useState(false);
   const [showCheckoutConfirm, setShowCheckoutConfirm] = useState(false);
-  const [notifications, setNotifications] = useState<RecentNotification[]>([]);
+  const [notifications, setNotifications] = useState<RecentNotification[]>(() => {
+    const saved = localStorage.getItem('pos_notifications');
+    if (!saved) return [];
+    try {
+      const parsed = JSON.parse(saved) as RecentNotification[];
+      const oneDayAgo = Date.now() - 24 * 60 * 60 * 1000;
+      return parsed.filter(n => n.timestamp > oneDayAgo);
+    } catch { return []; }
+  });
+
+  const saveNotifications = (notifs: RecentNotification[]) => {
+    setNotifications(notifs);
+    localStorage.setItem('pos_notifications', JSON.stringify(notifs));
+  };
+
   const barcodeRef = useRef<HTMLInputElement>(null);
 
   const { data: products = [], isLoading } = useQuery<Product[]>({
@@ -302,15 +317,14 @@ const POS: React.FC = () => {
       toast.success('Checkout berhasil', {
         description: `${order.orderNumber} berhasil dibuat dengan total ${formatCurrency(order.totalAmount)}.`,
       });
-      setNotifications(prev => [
-        {
-          id: order.id,
-          title: 'Checkout berhasil',
-          description: `${order.orderNumber} · ${formatCurrency(order.totalAmount)}`,
-          time: formatNotificationTime(),
-        },
-        ...prev,
-      ].slice(0, 8));
+      const newNotif: RecentNotification = {
+        id: order.id,
+        title: 'Checkout berhasil',
+        description: `${order.orderNumber} · ${formatCurrency(order.totalAmount)}`,
+        time: formatNotificationTime(),
+        timestamp: Date.now(),
+      };
+      saveNotifications([newNotif, ...notifications].slice(0, 50));
       queryClient.invalidateQueries({ queryKey: ['products'] });
     },
     onError: (err: unknown) => alert(getErrorMessage(err, 'Checkout gagal')),
@@ -501,9 +515,14 @@ const POS: React.FC = () => {
           <ShoppingCart className="size-5 text-primary" />
           <span className="font-bold text-foreground">Keranjang</span>
           {cart.length > 0 && (
-            <Badge className="ml-auto rounded-none">
-              {cart.reduce((s, i) => s + i.quantity, 0)} item
-            </Badge>
+            <div className="ml-auto flex items-center gap-1.5">
+              <Badge variant="outline" className="rounded-none border-primary/20 bg-primary/5 text-primary">
+                {cart.length} item
+              </Badge>
+              <Badge className="rounded-none">
+                {cart.reduce((s, i) => s + i.quantity, 0)} qty
+              </Badge>
+            </div>
           )}
         </div>
 
@@ -527,63 +546,71 @@ const POS: React.FC = () => {
             return (
               <div key={item.variantId} className="border-b px-2 py-3">
                 <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0 flex-1">
-                    <div className="text-sm font-extrabold leading-tight text-foreground">{item.name}</div>
-                    {product && (
-                      <div className="mt-2 grid gap-1.5">
-                        {getVariantOptions(product, 'size').length > 0 && (
-                          <div className="flex flex-wrap gap-1.5">
-                            {getVariantOptions(product, 'size').map(size => {
-                              const target = findMatchingVariant(product, selectedVariant, { size });
-                              const active = selectedVariant?.size === size;
-                              return (
-                                <Button
-                                  key={size}
-                                  type="button"
-                                  size="sm"
-                                  variant={active ? 'default' : 'outline'}
-                                  disabled={!target}
-                                  onClick={() => target && updateCartVariant(item.variantId, target.id)}
-                                  className="h-7 min-w-8 rounded-none px-2 text-xs"
-                                >
-                                  {size === 'SMALL' ? 'S' : size === 'MEDIUM' ? 'M' : 'L'}
-                                </Button>
-                              );
-                            })}
-                          </div>
-                        )}
-                        {getVariantOptions(product, 'temperature').length > 0 && (
-                          <div className="flex flex-wrap gap-1.5">
-                            {getVariantOptions(product, 'temperature').map(temperature => {
-                              const target = findMatchingVariant(product, selectedVariant, { temperature });
-                              const active = selectedVariant?.temperature === temperature;
-                              return (
-                                <Button
-                                  key={temperature}
-                                  type="button"
-                                  size="sm"
-                                  variant={active ? 'default' : 'outline'}
-                                  disabled={!target}
-                                  onClick={() => target && updateCartVariant(item.variantId, target.id)}
-                                  className="h-7 rounded-none px-2 text-xs"
-                                >
-                                  {TEMP_LABELS[temperature]}
-                                </Button>
-                              );
-                            })}
-                          </div>
+                  <div className="flex min-w-0 flex-1 gap-3">
+                    <img
+                      src={product ? getImageUrl(product.image) : ''}
+                      alt={item.name}
+                      className="size-14 shrink-0 rounded-none border object-cover"
+                      onError={e => { (e.target as HTMLImageElement).src = 'https://placehold.co/100x100?text=?'; }}
+                    />
+                    <div className="min-w-0 flex-1">
+                      <div className="text-sm font-extrabold leading-tight text-foreground">{item.name}</div>
+                      {product && (
+                        <div className="mt-2 grid gap-1.5">
+                          {getVariantOptions(product, 'size').length > 0 && (
+                            <div className="flex flex-wrap gap-1.5">
+                              {getVariantOptions(product, 'size').map(size => {
+                                const target = findMatchingVariant(product, selectedVariant, { size });
+                                const active = selectedVariant?.size === size;
+                                return (
+                                  <Button
+                                    key={size}
+                                    type="button"
+                                    size="sm"
+                                    variant={active ? 'default' : 'outline'}
+                                    disabled={!target}
+                                    onClick={() => target && updateCartVariant(item.variantId, target.id)}
+                                    className="h-9 min-w-10 rounded-none px-2 text-sm"
+                                  >
+                                    {size === 'SMALL' ? 'S' : size === 'MEDIUM' ? 'M' : 'L'}
+                                  </Button>
+                                );
+                              })}
+                            </div>
+                          )}
+                          {getVariantOptions(product, 'temperature').length > 0 && (
+                            <div className="flex flex-wrap gap-1.5">
+                              {getVariantOptions(product, 'temperature').map(temperature => {
+                                const target = findMatchingVariant(product, selectedVariant, { temperature });
+                                const active = selectedVariant?.temperature === temperature;
+                                return (
+                                  <Button
+                                    key={temperature}
+                                    type="button"
+                                    size="sm"
+                                    variant={active ? 'default' : 'outline'}
+                                    disabled={!target}
+                                    onClick={() => target && updateCartVariant(item.variantId, target.id)}
+                                    className="h-9 rounded-none px-3 text-sm"
+                                  >
+                                    {TEMP_LABELS[temperature]}
+                                  </Button>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      <div className="mt-1.5 text-xs text-muted-foreground">
+                        SKU {selectedVariant?.sku || item.variantName} · {formatCurrency(item.price)} / pcs
+                        {item.discountRate > 0 && (
+                          <span className="ml-1 text-green-600">(-{item.discountRate}%)</span>
                         )}
                       </div>
-                    )}
-                    <div className="mt-1.5 text-xs text-muted-foreground">
-                      SKU {selectedVariant?.sku || item.variantName} · {formatCurrency(item.price)} / pcs
-                      {item.discountRate > 0 && (
-                        <span className="ml-1 text-green-600">(-{item.discountRate}%)</span>
-                      )}
                     </div>
                   </div>
-                  <Button type="button" variant="ghost" size="icon" onClick={() => removeFromCart(item.variantId)} className="size-7 rounded-none text-destructive">
-                    <Trash2 className="size-4" />
+                  <Button type="button" variant="ghost" size="icon" onClick={() => removeFromCart(item.variantId)} className="size-8 rounded-none text-destructive">
+                    <Trash2 className="size-5" />
                   </Button>
                 </div>
                 <div className="mt-3 flex items-center justify-between">
@@ -673,8 +700,9 @@ const POS: React.FC = () => {
               <ToggleGroupItem
                 key={m}
                 value={m}
-                className="w-full rounded-none px-2 text-xs data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
+                className="flex h-12 w-full flex-col gap-0.5 rounded-none px-1 text-[10px] data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
               >
+                {m === 'CASH' ? <Banknote className="size-4" /> : m === 'CARD' ? <CreditCard className="size-4" /> : <Wallet className="size-4" />}
                 {m === 'CASH' ? 'Cash' : m === 'CARD' ? 'Card' : 'E-Wallet'}
               </ToggleGroupItem>
             ))}

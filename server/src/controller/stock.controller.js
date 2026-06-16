@@ -8,6 +8,15 @@ export const adjustStock = async (req, res) => {
   }
 
   try {
+    const currentStockLevel = await prisma.stockLedger.aggregate({
+      where: { variantId: value.variantId },
+      _sum: { quantityChange: true },
+    });
+    const currentStock = currentStockLevel._sum.quantityChange || 0;
+    if (currentStock + value.quantityChange < 0) {
+      return res.status(400).json({ message: 'Stok tidak boleh kurang dari 0' });
+    }
+
     const ledgerEntry = await prisma.stockLedger.create({
       data: {
         variantId: value.variantId,

@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 
 interface VariantStockRow {
   variantId: string;
@@ -103,25 +104,70 @@ const StockTab: React.FC = () => {
             <p className="mb-4 text-sm text-muted-foreground">
               <strong className="text-foreground">{adjustTarget.productName}</strong> — {adjustTarget.sku}
             </p>
+            
+            <div className="mb-6 grid grid-cols-2 gap-4 rounded-lg bg-muted/50 p-3 text-center">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Stok Saat Ini</p>
+                <p className="text-lg font-bold">{allVariants.find(v => v.variantId === adjustTarget.variantId)?.currentStock || 0}</p>
+              </div>
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Stok Akhir</p>
+                <p className={cn(
+                  "text-lg font-bold",
+                  (allVariants.find(v => v.variantId === adjustTarget.variantId)?.currentStock || 0) + Number(adjustForm.quantityChange || 0) < 0 
+                    ? "text-destructive" 
+                    : "text-primary"
+                )}>
+                  {(allVariants.find(v => v.variantId === adjustTarget.variantId)?.currentStock || 0) + Number(adjustForm.quantityChange || 0)}
+                </p>
+              </div>
+            </div>
+
             <FormRow label="Perubahan Jumlah (+ tambah / - kurangi)">
-              <Input type="number" value={adjustForm.quantityChange} onChange={e => setAdjustForm(f => ({ ...f, quantityChange: e.target.value }))} placeholder="Contoh: 10 atau -5" />
+              <Input 
+                type="number" 
+                value={adjustForm.quantityChange} 
+                onChange={e => setAdjustForm(f => ({ ...f, quantityChange: e.target.value }))} 
+                placeholder="Contoh: 10 atau -5"
+                className="h-10 text-sm"
+              />
+              <p className={cn(
+                "mt-1.5 text-[10px]",
+                (allVariants.find(v => v.variantId === adjustTarget.variantId)?.currentStock || 0) + Number(adjustForm.quantityChange || 0) < 0 
+                  ? "font-bold text-destructive" 
+                  : "text-muted-foreground"
+              )}>
+                {(allVariants.find(v => v.variantId === adjustTarget.variantId)?.currentStock || 0) + Number(adjustForm.quantityChange || 0) < 0 
+                  ? "Peringatan: Stok tidak boleh kurang dari 0." 
+                  : "Stok akhir tidak boleh kurang dari 0."}
+              </p>
             </FormRow>
             <FormRow label="Alasan">
               <Select value={adjustForm.reason} onValueChange={value => setAdjustForm(f => ({ ...f, reason: value }))}>
-                <SelectTrigger>
+                <SelectTrigger className="h-10 text-sm">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="RESTOCK">RESTOCK</SelectItem>
-                  <SelectItem value="SPOILAGE">SPOILAGE</SelectItem>
-                  <SelectItem value="RETURN">RETURN</SelectItem>
+                  <SelectItem value="RESTOCK">RESTOCK (Penambahan stok)</SelectItem>
+                  <SelectItem value="SPOILAGE">SPOILAGE (Barang rusak/basi)</SelectItem>
+                  <SelectItem value="RETURN">RETURN (Pengembalian)</SelectItem>
+                  <SelectItem value="ADJUSTMENT">ADJUSTMENT (Koreksi manual)</SelectItem>
                 </SelectContent>
               </Select>
             </FormRow>
-            <div className="mt-4 flex justify-end gap-2">
-              <Button type="button" variant="outline" onClick={() => setAdjustTarget(null)}>Batal</Button>
-              <Button type="button" onClick={() => adjustMutation.mutate()} disabled={!adjustForm.quantityChange || adjustMutation.isPending}>
-                {adjustMutation.isPending ? 'Menyimpan...' : 'Simpan'}
+            <div className="mt-6 flex justify-end gap-2 border-t pt-4">
+              <Button type="button" variant="outline" onClick={() => setAdjustTarget(null)} className="h-10 px-4">Batal</Button>
+              <Button 
+                type="button" 
+                onClick={() => adjustMutation.mutate()} 
+                disabled={
+                  !adjustForm.quantityChange || 
+                  adjustMutation.isPending || 
+                  ((allVariants.find(v => v.variantId === adjustTarget.variantId)?.currentStock || 0) + Number(adjustForm.quantityChange || 0) < 0)
+                }
+                className="h-10 px-6 font-bold"
+              >
+                {adjustMutation.isPending ? 'Menyimpan...' : 'Simpan Perubahan'}
               </Button>
             </div>
           </>
