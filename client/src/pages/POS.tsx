@@ -1,11 +1,28 @@
 import React, { useState, useMemo, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ShoppingCart, LogOut, LayoutDashboard, Search, Barcode, X, Plus, Minus, Trash2, PackageSearch, Bell, Banknote, CreditCard, Wallet } from 'lucide-react';
+import { 
+  ShoppingCart, 
+  LogOut, 
+  LayoutDashboard, 
+  Search, 
+  Barcode, 
+  X, 
+  Plus, 
+  Minus, 
+  Bell, 
+  Banknote, 
+  CreditCard, 
+  Wallet, 
+  Users,
+  Box,
+  Hash
+} from 'lucide-react';
 import { toast } from 'sonner';
 import api, { productsApi, membersApi, ordersApi, SERVER_URL } from '../api/api';
 import { useAuth } from '../hooks/useAuth';
 import ReceiptModal from '../components/ReceiptModal';
 import Modal from '../components/Modal';
+import ConfirmDialog from '../components/ConfirmDialog';
 import type { Product, Variant, CartItem, Member, Order } from '../types';
 import { getErrorMessage } from '../utils/error';
 import { Button } from '@/components/ui/button';
@@ -13,7 +30,6 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { AspectRatio } from '@/components/ui/aspect-ratio';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -22,18 +38,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@/components/ui/empty';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { cn } from '@/lib/utils';
-
-const SIZE_LABELS: Record<string, string> = {
-  SMALL: 'Small',
-  MEDIUM: 'Medium',
-  LARGE: 'Large',
-};
 
 const TEMP_LABELS: Record<string, string> = {
   HOT: 'Hot',
@@ -64,6 +72,7 @@ const POS: React.FC = () => {
   const [memberSearch, setMemberSearch] = useState('');
   const [showMemberDropdown, setShowMemberDropdown] = useState(false);
   const [showCheckoutConfirm, setShowCheckoutConfirm] = useState(false);
+  const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false);
   const [notifications, setNotifications] = useState<RecentNotification[]>(() => {
     const saved = localStorage.getItem('pos_notifications');
     if (!saved) return [];
@@ -119,7 +128,7 @@ const POS: React.FC = () => {
 
   const getVariantLabel = (variant: Variant) => {
     const details = [
-      variant.size ? SIZE_LABELS[variant.size] : null,
+      variant.size ? variant.size : null,
       variant.temperature ? TEMP_LABELS[variant.temperature] : null,
     ].filter(Boolean);
 
@@ -295,7 +304,7 @@ const POS: React.FC = () => {
       if (product) addToCart(product, { ...variant, currentStock: variant.currentStock ?? 1 });
       setBarcodeInput('');
     } catch {
-      alert('Barcode tidak ditemukan');
+      toast.error('Barcode tidak ditemukan');
       setBarcodeInput('');
     }
     barcodeRef.current?.focus();
@@ -327,440 +336,511 @@ const POS: React.FC = () => {
       saveNotifications([newNotif, ...notifications].slice(0, 50));
       queryClient.invalidateQueries({ queryKey: ['products'] });
     },
-    onError: (err: unknown) => alert(getErrorMessage(err, 'Checkout gagal')),
+    onError: (err: unknown) => toast.error(getErrorMessage(err, 'Checkout gagal')),
   });
 
   const getImageUrl = (path: string) => {
-    if (!path) return 'https://placehold.co/200x120?text=No+Image';
+    if (!path) return 'https://placehold.co/400x400?text=No+Image';
     if (path.startsWith('http')) return path;
     return `${SERVER_URL}${path}`;
   };
 
   if (isLoading) return (
-    <div className="flex h-screen items-center justify-center bg-background text-sm text-muted-foreground">
-      Loading produk...
+    <div className="flex h-screen items-center justify-center bg-background font-mono text-[10px] uppercase tracking-widest text-muted-foreground animate-pulse">
+      Initialising Terminal Systems...
     </div>
   );
 
   return (
-    <div className="grid h-screen min-h-0 grid-cols-[1fr_380px] bg-background">
-      {/* LEFT — Products */}
-      <div className="flex min-h-0 min-w-0 flex-col overflow-hidden">
-        {/* Header */}
-        <div className="grid h-16 shrink-0 grid-cols-[160px_minmax(320px,1fr)_auto] items-center gap-4 border-b bg-card px-4">
-          <div className="min-w-0">
-            <div className="text-base font-semibold leading-none text-foreground">Cafe POS</div>
+    <div className="flex h-screen flex-col bg-background font-sans antialiased selection:bg-primary selection:text-primary-foreground">
+      {/* Editorial Header */}
+      <header className="flex h-16 shrink-0 items-center justify-between border-b border-border bg-card px-8">
+        <div className="flex items-center gap-8">
+          <div className="flex flex-col">
+            <div className="text-xl font-bold uppercase tracking-[0.2em]">CAFE POS</div>
+            <div className="flex items-center gap-2 text-[9px] font-mono uppercase tracking-widest text-muted-foreground">
+              <span>Terminal: 001</span>
+              <span className="h-2 w-px bg-border" />
+              <span className="text-green-600">Active</span>
+            </div>
           </div>
-          <div className="grid min-w-0 grid-cols-[minmax(220px,1fr)_180px] gap-2">
-            <div className="relative flex-1">
-              <Search className="absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+          
+          <div className="h-10 w-px bg-border" />
+          
+          <nav className="flex items-center gap-6">
+            <div className="relative group">
+              <Search className="absolute left-0 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground transition-colors group-focus-within:text-foreground" />
               <Input
                 value={search}
                 onChange={e => setSearch(e.target.value)}
-                placeholder="Cari produk..."
-                className="h-9 rounded-none pl-8"
+                placeholder="SEARCH_PRODUCT"
+                className="h-10 w-64 border-0 border-b border-transparent bg-transparent pl-6 text-xs font-bold uppercase tracking-widest placeholder:text-muted-foreground/50 focus-visible:ring-0 focus-visible:border-foreground transition-all rounded-none"
               />
             </div>
-            <form onSubmit={handleBarcodeSubmit}>
-              <div className="relative">
-                <Barcode className="absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  ref={barcodeRef}
-                  value={barcodeInput}
-                  onChange={e => setBarcodeInput(e.target.value)}
-                  placeholder="Scan barcode..."
-                  className="h-9 rounded-none pl-8"
-                />
-              </div>
+            
+            <form onSubmit={handleBarcodeSubmit} className="relative group">
+              <Barcode className="absolute left-0 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground transition-colors group-focus-within:text-foreground" />
+              <Input
+                ref={barcodeRef}
+                value={barcodeInput}
+                onChange={e => setBarcodeInput(e.target.value)}
+                placeholder="SCAN_BARCODE"
+                className="h-10 w-48 border-0 border-b border-transparent bg-transparent pl-6 text-xs font-bold uppercase tracking-widest placeholder:text-muted-foreground/50 focus-visible:ring-0 focus-visible:border-foreground transition-all rounded-none"
+              />
             </form>
-          </div>
+          </nav>
+        </div>
+
+        <div className="flex items-center gap-6">
           <div className="flex items-center gap-2">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button type="button" variant="ghost" size="icon" className="relative rounded-none" title="Notifikasi">
+                <Button variant="ghost" size="icon" className="relative h-10 w-10 rounded-none border border-border bg-background hover:border-foreground transition-all">
                   <Bell className="size-4" />
                   {notifications.length > 0 && (
-                    <span className="absolute -right-1 -top-1 flex size-4 items-center justify-center rounded-none bg-destructive text-[10px] font-bold text-destructive-foreground">
+                    <span className="absolute -right-1 -top-1 flex size-4 items-center justify-center bg-foreground text-[8px] font-bold text-background uppercase">
                       {notifications.length}
                     </span>
                   )}
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-80">
-                <DropdownMenuLabel className="font-semibold text-foreground">Notifikasi Terbaru</DropdownMenuLabel>
+              <DropdownMenuContent align="end" className="w-80 rounded-none border-border">
+                <DropdownMenuLabel className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Log_Notifications</DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                {notifications.length === 0 ? (
-                  <DropdownMenuItem disabled className="py-4 text-muted-foreground">
-                    Belum ada notifikasi
-                  </DropdownMenuItem>
-                ) : notifications.map(item => (
-                  <DropdownMenuItem key={item.id} className="flex items-start gap-3 py-3">
-                    <span className="mt-0.5 size-2 shrink-0 bg-green-600" />
-                    <span className="min-w-0 flex-1">
-                      <span className="block font-semibold text-foreground">{item.title}</span>
-                      <span className="mt-0.5 block truncate text-muted-foreground">{item.description}</span>
-                    </span>
-                    <span className="text-[11px] text-muted-foreground">{item.time}</span>
-                  </DropdownMenuItem>
-                ))}
+                <ScrollArea className="h-[300px]">
+                  {notifications.length === 0 ? (
+                    <div className="px-4 py-8 text-center text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                      No_Active_Logs
+                    </div>
+                  ) : notifications.map(item => (
+                    <DropdownMenuItem key={item.id} className="flex flex-col items-start gap-1 px-4 py-3 rounded-none border-b border-border/50 last:border-0">
+                      <div className="flex w-full items-center justify-between">
+                        <span className="text-[10px] font-bold uppercase tracking-widest">{item.title}</span>
+                        <span className="text-[9px] font-mono text-muted-foreground">{item.time}</span>
+                      </div>
+                      <span className="text-[10px] font-medium text-muted-foreground">{item.description}</span>
+                    </DropdownMenuItem>
+                  ))}
+                </ScrollArea>
               </DropdownMenuContent>
             </DropdownMenu>
+
             <Button
-              type="button"
               variant="outline"
               size="sm"
-              className="rounded-none"
+              className="h-10 rounded-none border-border bg-background px-4 text-[10px] font-bold uppercase tracking-widest hover:border-foreground transition-all"
               onClick={() => window.location.href = '/dashboard'}
-              title="Dashboard"
             >
-              <LayoutDashboard className="size-4" />
-              Dashboard
+              <LayoutDashboard className="mr-2 size-3.5" />
+              Systems
             </Button>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button type="button" variant="ghost" className="h-9 rounded-none px-2" title="Akun">
-                  <Avatar size="sm" className="rounded-none after:rounded-none">
-                    <AvatarFallback className="rounded-none">{userInitial}</AvatarFallback>
-                  </Avatar>
-                  <span className="hidden min-w-0 text-left xl:block">
-                    <span className="block max-w-28 truncate text-xs font-semibold leading-tight">{user?.username || '-'}</span>
-                    <span className="block text-[11px] font-normal leading-tight text-muted-foreground">{user?.role || 'User'}</span>
-                  </span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuLabel>
-                  <span className="block font-semibold text-foreground">{user?.username || '-'}</span>
-                  <span className="block text-[11px] font-normal text-muted-foreground">{user?.role || 'User'}</span>
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem variant="destructive" onClick={logout}>
-                  <LogOut className="size-4" />
-                  Logout
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+          </div>
+
+          <div className="h-6 w-px bg-border" />
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="h-10 gap-3 rounded-none px-2 hover:bg-muted/50 transition-colors">
+                <Avatar size="sm" className="rounded-none border border-border">
+                  <AvatarFallback className="rounded-none bg-foreground text-background text-[10px] font-bold">{userInitial}</AvatarFallback>
+                </Avatar>
+                <div className="hidden text-left xl:block">
+                  <div className="text-[10px] font-bold uppercase tracking-widest">{user?.username || 'GUEST'}</div>
+                  <div className="text-[8px] font-mono text-muted-foreground uppercase tracking-widest leading-none">{user?.role || 'UNAUTHORIZED'}</div>
+                </div>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56 rounded-none border-border">
+              <DropdownMenuLabel className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">User_Context</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem 
+                variant="destructive" 
+                onClick={() => setIsLogoutDialogOpen(true)} 
+                className="rounded-none focus:bg-destructive focus:text-destructive-foreground text-[10px] font-bold uppercase tracking-widest"
+              >
+                <LogOut className="mr-2 size-3.5" />
+                Terminate_Session
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </header>
+
+      <div className="grid min-h-0 flex-1 grid-cols-[1fr_450px]">
+        {/* LEFT — Product Archive */}
+        <div className="flex min-h-0 min-w-0 flex-col overflow-hidden bg-muted/20">
+          {/* Section Strips */}
+          <div className="flex h-12 shrink-0 items-center border-b border-border bg-card px-8">
+            <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+              <Box className="size-3" />
+              <span>Archive_Browser</span>
+            </div>
+            <div className="mx-6 h-4 w-px bg-border" />
+            <Tabs value={selectedCategory} onValueChange={setSelectedCategory} className="flex-1">
+              <TabsList className="h-12 bg-transparent p-0" variant="line">
+                {categories.map(([id, name]) => (
+                  <TabsTrigger
+                    key={id}
+                    value={id}
+                    className="h-12 rounded-none border-b-2 border-transparent px-6 text-[10px] font-bold uppercase tracking-widest transition-all data-[state=active]:border-foreground data-[state=active]:text-foreground data-[state=active]:bg-transparent"
+                  >
+                    {name}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </Tabs>
+          </div>
+
+          {/* Grid Content */}
+          <div className="grid min-h-0 flex-1 auto-rows-max grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-px overflow-y-auto bg-border border-b border-border">
+            {filteredProducts.length === 0 && (
+              <div className="col-span-full flex h-full flex-col items-center justify-center bg-card p-12 text-center">
+                <Hash className="mb-4 size-12 text-muted/30" />
+                <h3 className="text-sm font-bold uppercase tracking-[0.2em]">0_Items_Found</h3>
+                <p className="mt-2 text-[10px] font-medium uppercase tracking-widest text-muted-foreground">Query returned no matching product manifests.</p>
+              </div>
+            )}
+            {filteredProducts.map(product => (
+              <div
+                key={product.id}
+                className={cn(
+                  'group flex flex-col bg-card transition-colors hover:bg-muted/30',
+                  getAvailableVariants(product).length === 0 && 'opacity-60',
+                )}
+              >
+                <div className="relative overflow-hidden border-b border-border">
+                  <AspectRatio ratio={1 / 1}>
+                    <img
+                      src={getImageUrl(product.image)}
+                      alt={product.name}
+                      className="size-full object-cover transition-all duration-500 group-hover:scale-105"
+                      onError={e => { (e.target as HTMLImageElement).src = 'https://placehold.co/500x500?text=VOID_ASSET'; }}
+                    />
+                  </AspectRatio>
+                  <div className="absolute right-0 top-0 p-3">
+                    {getAvailableVariants(product).length === 0 ? (
+                      <Badge variant="destructive" className="rounded-none border-0 text-[8px] font-bold uppercase tracking-widest">DEPLETED</Badge>
+                    ) : (
+                      <div className="flex size-7 items-center justify-center border border-white/20 bg-black/60 font-mono text-[9px] font-bold text-white backdrop-blur-sm">
+                        {getAvailableVariants(product).length}
+                      </div>
+                    )}
+                  </div>
+                </div>
+                
+                <div className="flex flex-1 flex-col p-4">
+                  <div className="mb-1 text-[8px] font-mono text-muted-foreground uppercase tracking-widest">
+                    MANIFEST_{product.id.slice(-6).toUpperCase()}
+                  </div>
+                  <h3 className="mb-3 line-clamp-2 text-xs font-bold uppercase tracking-tight leading-tight">
+                    {product.name}
+                  </h3>
+                  
+                  <div className="mt-auto flex flex-col gap-3">
+                    <div className="flex flex-col">
+                      <span className="text-[8px] font-bold uppercase tracking-widest text-muted-foreground">Price_Point</span>
+                      <span className="text-sm font-bold tracking-tight">{getPriceRange(product)}</span>
+                    </div>
+                    
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-8 rounded-none border-foreground px-3 text-[9px] font-bold uppercase tracking-widest transition-all hover:bg-foreground hover:text-background"
+                      disabled={getAvailableVariants(product).length === 0}
+                      onClick={() => addToCart(product)}
+                    >
+                      Process_Item
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
 
-        {/* Category Tabs */}
-        <Tabs value={selectedCategory} onValueChange={setSelectedCategory} className="shrink-0 border-b bg-card px-4 py-2">
-          <TabsList className="max-w-full justify-start overflow-x-auto" variant="line">
-            {categories.map(([id, name]) => (
-              <TabsTrigger key={id} value={id} className="rounded-none px-3">
-                {name}
-              </TabsTrigger>
-            ))}
-          </TabsList>
-        </Tabs>
-
-        {/* Product Grid */}
-        <div className="grid min-h-0 flex-1 auto-rows-max grid-cols-[repeat(auto-fill,minmax(210px,1fr))] gap-4 overflow-y-auto p-4">
-          {filteredProducts.length === 0 && (
-            <Empty className="col-span-full min-h-72 border">
-              <EmptyHeader>
-                <EmptyMedia variant="icon">
-                  <PackageSearch className="size-5" />
-                </EmptyMedia>
-                <EmptyTitle>Tidak ada produk</EmptyTitle>
-                <EmptyDescription>Produk tidak ditemukan untuk pencarian atau kategori ini.</EmptyDescription>
-              </EmptyHeader>
-            </Empty>
-          )}
-          {filteredProducts.map(product => (
-            <Card
-              key={product.id}
-              className={cn(
-                'rounded-none p-0 transition hover:border-primary/40 hover:shadow-md',
-                getAvailableVariants(product).length === 0 && 'opacity-70',
-              )}
-            >
-              <AspectRatio ratio={4 / 3} className="relative bg-muted">
-                <img
-                  src={getImageUrl(product.image)}
-                  alt={product.name}
-                  className="size-full object-cover"
-                  onError={e => { (e.target as HTMLImageElement).src = 'https://placehold.co/220x128?text=No+Image'; }}
-                />
-                {getAvailableVariants(product).length === 0 && (
-                  <Badge variant="destructive" className="absolute left-2 top-2 rounded-none">Habis</Badge>
-                )}
-              </AspectRatio>
-              <CardContent className="p-3">
-                <div className="line-clamp-2 min-h-[2.4rem] text-sm font-semibold leading-tight text-foreground">{product.name}</div>
-                <div className="mt-2 flex items-center justify-between gap-2">
-                  <span className="text-sm font-bold text-green-600">{getPriceRange(product)}</span>
-                  {product.category?.name && <Badge variant="outline" className="max-w-24 truncate rounded-none">{product.category.name}</Badge>}
-                </div>
-              </CardContent>
-              <CardFooter className="border-t p-3">
-                <Button
-                  type="button"
-                  className="w-full rounded-none"
-                  disabled={getAvailableVariants(product).length === 0}
-                  onClick={() => addToCart(product)}
-                >
-                  <Plus className="size-4" />
-                  Tambahkan
-                </Button>
-              </CardFooter>
-            </Card>
-          ))}
-        </div>
-      </div>
-
-      {/* RIGHT — Cart */}
-      <div className="flex min-h-0 flex-col overflow-hidden border-l bg-card">
-        <div className="flex shrink-0 items-center gap-2 border-b px-4 py-3">
-          <ShoppingCart className="size-5 text-primary" />
-          <span className="font-bold text-foreground">Keranjang</span>
-          {cart.length > 0 && (
-            <div className="ml-auto flex items-center gap-1.5">
-              <Badge variant="outline" className="rounded-none border-primary/20 bg-primary/5 text-primary">
-                {cart.length} item
-              </Badge>
-              <Badge className="rounded-none">
-                {cart.reduce((s, i) => s + i.quantity, 0)} qty
-              </Badge>
+        {/* RIGHT — System Cart */}
+        <div className="flex min-h-0 flex-col overflow-hidden border-l border-border bg-card shadow-[10px_0_40px_-15px_rgba(0,0,0,0.1)]">
+          <div className="flex h-16 shrink-0 items-center justify-between border-b border-border px-8">
+            <div className="flex items-center gap-3">
+              <div className="flex size-10 items-center justify-center border border-border bg-muted/30">
+                <ShoppingCart className="size-5" />
+              </div>
+              <div className="flex flex-col">
+                <span className="text-[10px] font-bold uppercase tracking-[0.2em]">Transaction_Buffer</span>
+                <span className="text-[8px] font-mono text-muted-foreground uppercase tracking-widest">Queue: {cart.length} manifest(s)</span>
+              </div>
             </div>
-          )}
-        </div>
+            {cart.length > 0 && (
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => setCart([])}
+                className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground hover:text-destructive"
+              >
+                Clear_Buffer
+              </Button>
+            )}
+          </div>
 
-        {/* Cart Items */}
-        <ScrollArea className="min-h-0 flex-1">
-          <div className="p-2">
-          {cart.length === 0 ? (
-            <Empty className="min-h-80 border-0 p-8">
-              <EmptyHeader>
-                <EmptyMedia variant="icon">
-                  <ShoppingCart className="size-5" />
-                </EmptyMedia>
-                <EmptyTitle>Keranjang kosong</EmptyTitle>
-                <EmptyDescription>Pilih produk untuk mulai membuat pesanan.</EmptyDescription>
-              </EmptyHeader>
-            </Empty>
-          ) : cart.map(item => {
-            const product = products.find(p => p.id === item.productId);
-            const selectedVariant = product?.variants.find(v => v.id === item.variantId);
+          <ScrollArea className="flex-1 min-h-0">
+            <div className="divide-y divide-border/50">
+              {cart.length === 0 ? (
+                <div className="flex h-[400px] flex-col items-center justify-center px-12 text-center opacity-40">
+                  <Hash className="mb-4 size-10" />
+                  <span className="text-[10px] font-bold uppercase tracking-[0.2em]">Transaction_Idle</span>
+                  <span className="mt-2 text-[9px] font-medium uppercase tracking-widest leading-relaxed max-w-[200px]">Waiting for item entry into the manifest buffer.</span>
+                </div>
+              ) : cart.map(item => {
+                const product = products.find(p => p.id === item.productId);
+                const selectedVariant = product?.variants.find(v => v.id === item.variantId);
 
-            return (
-              <div key={item.variantId} className="border-b px-2 py-3">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex min-w-0 flex-1 gap-3">
-                    <img
-                      src={product ? getImageUrl(product.image) : ''}
-                      alt={item.name}
-                      className="size-14 shrink-0 rounded-none border object-cover"
-                      onError={e => { (e.target as HTMLImageElement).src = 'https://placehold.co/100x100?text=?'; }}
-                    />
-                    <div className="min-w-0 flex-1">
-                      <div className="text-sm font-extrabold leading-tight text-foreground">{item.name}</div>
-                      {product && (
-                        <div className="mt-2 grid gap-1.5">
-                          {getVariantOptions(product, 'size').length > 0 && (
-                            <div className="flex flex-wrap gap-1.5">
+                return (
+                  <div key={item.variantId} className="group px-8 py-6 transition-colors hover:bg-muted/10">
+                    <div className="flex gap-6">
+                      <div className="relative size-20 shrink-0 border border-border p-1 transition-all">
+                        <img
+                          src={product ? getImageUrl(product.image) : ''}
+                          alt={item.name}
+                          className="size-full object-cover"
+                          onError={e => { (e.target as HTMLImageElement).src = 'https://placehold.co/200x200?text=VOID'; }}
+                        />
+                      </div>
+                      
+                      <div className="flex min-w-0 flex-1 flex-col">
+                        <div className="mb-1 flex items-start justify-between gap-2">
+                          <h4 className="line-clamp-1 text-[11px] font-bold uppercase tracking-widest">{item.name}</h4>
+                          <button 
+                            onClick={() => removeFromCart(item.variantId)}
+                            className="text-muted-foreground transition-colors hover:text-destructive"
+                          >
+                            <X className="size-3.5" />
+                          </button>
+                        </div>
+                        
+                        <div className="mb-4 text-[9px] font-mono text-muted-foreground uppercase">
+                          REF_{item.variantId.slice(-6).toUpperCase()}
+                        </div>
+                        
+                        <div className="mb-4 flex flex-wrap gap-2">
+                          {product && getVariantOptions(product, 'size').length > 0 && (
+                            <div className="flex gap-1 border border-border p-0.5">
                               {getVariantOptions(product, 'size').map(size => {
                                 const target = findMatchingVariant(product, selectedVariant, { size });
                                 const active = selectedVariant?.size === size;
                                 return (
-                                  <Button
+                                  <button
                                     key={size}
-                                    type="button"
-                                    size="sm"
-                                    variant={active ? 'default' : 'outline'}
                                     disabled={!target}
                                     onClick={() => target && updateCartVariant(item.variantId, target.id)}
-                                    className="h-9 min-w-10 rounded-none px-2 text-sm"
+                                    className={cn(
+                                      "h-6 min-w-8 px-2 text-[9px] font-bold uppercase transition-all",
+                                      active ? "bg-foreground text-background" : "hover:bg-muted"
+                                    )}
                                   >
                                     {size === 'SMALL' ? 'S' : size === 'MEDIUM' ? 'M' : 'L'}
-                                  </Button>
+                                  </button>
                                 );
                               })}
                             </div>
                           )}
-                          {getVariantOptions(product, 'temperature').length > 0 && (
-                            <div className="flex flex-wrap gap-1.5">
-                              {getVariantOptions(product, 'temperature').map(temperature => {
-                                const target = findMatchingVariant(product, selectedVariant, { temperature });
-                                const active = selectedVariant?.temperature === temperature;
+                          
+                          {product && getVariantOptions(product, 'temperature').length > 0 && (
+                            <div className="flex gap-1 border border-border p-0.5">
+                              {getVariantOptions(product, 'temperature').map(temp => {
+                                const target = findMatchingVariant(product, selectedVariant, { temperature: temp });
+                                const active = selectedVariant?.temperature === temp;
                                 return (
-                                  <Button
-                                    key={temperature}
-                                    type="button"
-                                    size="sm"
-                                    variant={active ? 'default' : 'outline'}
+                                  <button
+                                    key={temp}
                                     disabled={!target}
                                     onClick={() => target && updateCartVariant(item.variantId, target.id)}
-                                    className="h-9 rounded-none px-3 text-sm"
+                                    className={cn(
+                                      "h-6 px-3 text-[9px] font-bold uppercase transition-all",
+                                      active ? "bg-foreground text-background" : "hover:bg-muted"
+                                    )}
                                   >
-                                    {TEMP_LABELS[temperature]}
-                                  </Button>
+                                    {temp}
+                                  </button>
                                 );
                               })}
                             </div>
                           )}
                         </div>
-                      )}
-                      <div className="mt-1.5 text-xs text-muted-foreground">
-                        SKU {selectedVariant?.sku || item.variantName} · {formatCurrency(item.price)} / pcs
-                        {item.discountRate > 0 && (
-                          <span className="ml-1 text-green-600">(-{item.discountRate}%)</span>
-                        )}
+                        
+                        <div className="mt-auto flex items-center justify-between">
+                          <div className="flex items-center border border-border">
+                            <button 
+                              onClick={() => updateQuantity(item.variantId, -1)}
+                              className="flex size-7 items-center justify-center hover:bg-muted"
+                            >
+                              <Minus className="size-3" />
+                            </button>
+                            <span className="flex h-7 min-w-8 items-center justify-center border-x border-border font-mono text-[10px] font-bold">{item.quantity}</span>
+                            <button 
+                              onClick={() => updateQuantity(item.variantId, 1)}
+                              className="flex size-7 items-center justify-center hover:bg-muted"
+                            >
+                              <Plus className="size-3" />
+                            </button>
+                          </div>
+                          
+                          <div className="flex flex-col items-end">
+                            {item.discountRate > 0 && (
+                              <span className="text-[9px] font-bold text-green-600 uppercase tracking-widest">-{item.discountRate}% ADJUST</span>
+                            )}
+                            <span className="text-sm font-bold tracking-tight">
+                              {formatCurrency((item.price - item.discountAmount) * item.quantity)}
+                            </span>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
-                  <Button type="button" variant="ghost" size="icon" onClick={() => removeFromCart(item.variantId)} className="size-8 rounded-none text-destructive">
-                    <Trash2 className="size-5" />
-                  </Button>
-                </div>
-                <div className="mt-3 flex items-center justify-between">
-                  <div className="flex items-center gap-2 bg-muted p-1">
-                    <Button type="button" variant="outline" size="icon" onClick={() => updateQuantity(item.variantId, -1)} className="size-6 rounded-none">
-                      <Minus className="size-3" />
-                    </Button>
-                    <span className="min-w-5 text-center text-sm font-bold">{item.quantity}</span>
-                    <Button type="button" variant="outline" size="icon" onClick={() => updateQuantity(item.variantId, 1)} className="size-6 rounded-none">
-                      <Plus className="size-3" />
-                    </Button>
-                  </div>
-                  <span className="text-sm font-extrabold text-foreground">
-                    {formatCurrency((item.price - item.discountAmount) * item.quantity)}
-                  </span>
-                </div>
-              </div>
-            );
-          })}
-          </div>
-        </ScrollArea>
-
-        {/* Cart Footer */}
-        <div className="shrink-0 border-t p-3">
-          {/* Member Select */}
-          <div className="relative mb-3">
-            <label className="mb-1 block text-xs font-medium text-muted-foreground">Member (Opsional)</label>
-            <div className="flex gap-2">
-              <Input
-                value={memberSearch}
-                onChange={e => { setMemberSearch(e.target.value); setShowMemberDropdown(true); if (!e.target.value) clearMember(); }}
-                onFocus={() => setShowMemberDropdown(true)}
-                placeholder="Cari nama member..."
-                className="h-8 rounded-none text-xs"
-              />
-              {memberId && (
-                <Button type="button" variant="destructive" size="icon" onClick={clearMember} className="h-8 w-8 rounded-none">
-                  <X className="size-4" />
-                </Button>
-              )}
+                );
+              })}
             </div>
-            {showMemberDropdown && filteredMembers.length > 0 && !memberId && (
-              <div className="absolute bottom-full left-0 right-0 z-50 max-h-40 overflow-y-auto border bg-popover shadow-lg">
-                {filteredMembers.map(m => (
-                  <div
-                    key={m.id}
-                    onClick={() => selectMember(m)}
-                    className="cursor-pointer border-b px-3 py-2 text-xs hover:bg-muted"
-                  >
-                    {m.name} {m.phone ? `· ${m.phone}` : ''}
+          </ScrollArea>
+
+          {/* Buffer Summary */}
+          <div className="shrink-0 space-y-6 border-t border-border bg-muted/10 p-8">
+            <div className="space-y-4">
+              <div className="relative">
+                <div className="mb-2 flex items-center justify-between">
+                  <label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Entity_Affiliation</label>
+                  {memberId && (
+                    <button onClick={clearMember} className="text-[9px] font-bold uppercase tracking-widest text-destructive">Detach</button>
+                  )}
+                </div>
+                <div className="relative">
+                  <Users className="absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    value={memberSearch}
+                    onChange={e => { setMemberSearch(e.target.value); setShowMemberDropdown(true); if (!e.target.value) clearMember(); }}
+                    onFocus={() => setShowMemberDropdown(true)}
+                    placeholder="QUERY_MEMBER"
+                    className="h-10 rounded-none border-border bg-background pl-9 text-[10px] font-bold uppercase tracking-widest focus-visible:ring-0 focus-visible:border-foreground"
+                  />
+                </div>
+                
+                {showMemberDropdown && filteredMembers.length > 0 && !memberId && (
+                  <div className="absolute bottom-full mb-1 left-0 right-0 z-50 max-h-48 overflow-y-auto rounded-none border border-border bg-card shadow-2xl">
+                    {filteredMembers.map(m => (
+                      <button
+                        key={m.id}
+                        onClick={() => selectMember(m)}
+                        className="flex w-full flex-col border-b border-border/50 px-4 py-3 text-left transition-colors hover:bg-muted"
+                      >
+                        <span className="text-[10px] font-bold uppercase tracking-widest">{m.name}</span>
+                        <span className="text-[9px] font-mono text-muted-foreground">{m.phone}</span>
+                      </button>
+                    ))}
                   </div>
-                ))}
+                )}
               </div>
-            )}
-            {memberId && <div className="mt-1 text-xs text-green-600">Diskon member aktif</div>}
-          </div>
-
-          {/* Totals */}
-          <div className="mb-2 space-y-1 text-xs text-muted-foreground">
-            <div className="flex justify-between">
-              <span>Subtotal</span>
-              <span>{formatCurrency(totals.subtotal)}</span>
+              
+              <div className="border border-dashed border-border p-4">
+                <div className="mb-4 space-y-2">
+                  <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                    <span>Base_Subtotal</span>
+                    <span className="text-foreground">{formatCurrency(totals.subtotal)}</span>
+                  </div>
+                  {totals.discount > 0 && (
+                    <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest text-green-600">
+                      <span>Adjustment_Member</span>
+                      <span>-{formatCurrency(totals.discount)}</span>
+                    </div>
+                  )}
+                </div>
+                
+                <div className="flex items-end justify-between">
+                  <div className="flex flex-col">
+                    <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Settlement_Amount</span>
+                    <span className="text-3xl font-bold tracking-tighter text-primary">{formatCurrency(totals.total)}</span>
+                  </div>
+                  
+                  <div className="flex flex-col items-end gap-1.5">
+                    <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Protocol</span>
+                    <div className="flex items-center gap-2 border border-border bg-background px-2 py-1">
+                      {paymentMethod === 'CASH' ? <Banknote className="size-3.5" /> : paymentMethod === 'CARD' ? <CreditCard className="size-3.5" /> : <Wallet className="size-3.5" />}
+                      <span className="text-[9px] font-bold uppercase tracking-widest">{paymentMethod}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
-            {totals.discount > 0 && (
-              <div className="flex justify-between text-green-600">
-                <span>Diskon</span>
-                <span>-{formatCurrency(totals.discount)}</span>
-              </div>
-            )}
-          </div>
-          <div className="mb-3 flex justify-between text-lg font-extrabold text-foreground">
-            <span>Total</span>
-            <span>{formatCurrency(totals.total)}</span>
-          </div>
 
-          {/* Payment Method */}
-          <ToggleGroup
-            type="single"
-            value={paymentMethod}
-            onValueChange={value => { if (value) setPaymentMethod(value as typeof paymentMethod); }}
-            variant="outline"
-            size="sm"
-            spacing={1}
-            className="mb-3 grid w-full grid-cols-3"
-          >
-            {(['CASH', 'CARD', 'EWALLET'] as const).map(m => (
-              <ToggleGroupItem
-                key={m}
-                value={m}
-                className="flex h-12 w-full flex-col gap-0.5 rounded-none px-1 text-[10px] data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
-              >
-                {m === 'CASH' ? <Banknote className="size-4" /> : m === 'CARD' ? <CreditCard className="size-4" /> : <Wallet className="size-4" />}
-                {m === 'CASH' ? 'Cash' : m === 'CARD' ? 'Card' : 'E-Wallet'}
-              </ToggleGroupItem>
-            ))}
-          </ToggleGroup>
+            <div className="grid grid-cols-3 gap-2">
+              {(['CASH', 'CARD', 'EWALLET'] as const).map(m => (
+                <button
+                  key={m}
+                  onClick={() => setPaymentMethod(m)}
+                  className={cn(
+                    "flex flex-col items-center justify-center gap-2 border border-border bg-background px-2 py-3 transition-all",
+                    paymentMethod === m ? "border-foreground bg-foreground text-background" : "hover:border-foreground/50"
+                  )}
+                >
+                  {m === 'CASH' ? <Banknote className="size-4" /> : m === 'CARD' ? <CreditCard className="size-4" /> : <Wallet className="size-4" />}
+                  <span className="text-[9px] font-bold uppercase tracking-widest">{m === 'CASH' ? 'CASH' : m === 'CARD' ? 'CARD' : 'DIGITAL'}</span>
+                </button>
+              ))}
+            </div>
 
-          <Button
-            type="button"
-            disabled={cart.length === 0 || checkoutMutation.isPending}
-            onClick={() => setShowCheckoutConfirm(true)}
-            className="h-11 w-full rounded-none bg-green-600 text-base hover:bg-green-700"
-          >
-            {checkoutMutation.isPending ? 'Memproses...' : 'CHECKOUT'}
-          </Button>
+            <Button
+              disabled={cart.length === 0 || checkoutMutation.isPending}
+              onClick={() => setShowCheckoutConfirm(true)}
+              className="h-14 w-full rounded-none bg-foreground text-[11px] font-bold uppercase tracking-[0.3em] text-background hover:bg-muted-foreground transition-all disabled:opacity-30"
+            >
+              {checkoutMutation.isPending ? 'PROCESSING_ORDER...' : 'AUTHORIZE_SETTLEMENT'}
+            </Button>
+          </div>
         </div>
       </div>
 
       <ReceiptModal isOpen={!!receiptOrder} onClose={() => setReceiptOrder(null)} order={receiptOrder} />
+      
       <Modal
         isOpen={showCheckoutConfirm}
         onClose={() => {
           if (!checkoutMutation.isPending) setShowCheckoutConfirm(false);
         }}
-        title="Konfirmasi Checkout"
+        title="TRANSACTION_SETTLEMENT"
         size="md"
       >
-        <div>
-          <div className="mb-4 grid grid-cols-2 gap-3">
-            <div className="border bg-muted/50 p-3">
-              <div className="text-xs font-bold uppercase text-muted-foreground">Member</div>
-              <div className="mt-1 text-sm font-bold text-foreground">{memberId ? memberSearch : 'Non-member'}</div>
+        <div className="space-y-8 font-sans">
+          <div className="grid grid-cols-2 gap-px border border-border bg-border">
+            <div className="bg-card p-6">
+              <span className="mb-2 block text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Entity_Status</span>
+              <span className="text-xs font-bold uppercase tracking-widest">{memberId ? memberSearch : 'ANONYMOUS_ENTITY'}</span>
             </div>
-            <div className="border bg-muted/50 p-3">
-              <div className="text-xs font-bold uppercase text-muted-foreground">Pembayaran</div>
-              <div className="mt-1 text-sm font-bold text-foreground">{paymentMethod}</div>
+            <div className="bg-card p-6">
+              <span className="mb-2 block text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Settlement_Protocol</span>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold uppercase tracking-widest">{paymentMethod}</span>
+              </div>
             </div>
           </div>
 
-          <div className="mb-4 border">
+          <div className="border border-border">
             <Table>
               <TableHeader>
-                <TableRow className="bg-muted/60 hover:bg-muted/60">
-                  <TableHead>Item</TableHead>
-                  <TableHead className="text-center">Qty</TableHead>
-                  <TableHead className="text-right">Subtotal</TableHead>
+                <TableRow className="bg-muted/50 hover:bg-muted/50 border-b border-border">
+                  <TableHead className="h-12 px-6 text-[10px] font-bold uppercase tracking-widest">Entry_Description</TableHead>
+                  <TableHead className="h-12 text-center text-[10px] font-bold uppercase tracking-widest">Qty</TableHead>
+                  <TableHead className="h-12 px-6 text-right text-[10px] font-bold uppercase tracking-widest">Settlement</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {cart.map(item => (
-                  <TableRow key={item.variantId}>
-                    <TableCell>
-                      <div className="font-bold text-foreground">{item.name}</div>
-                      <div className="mt-0.5 text-xs text-muted-foreground">
-                        {item.variantName} · {formatCurrency(item.price)}
-                        {item.discountRate > 0 && <span className="text-green-600"> · Diskon {item.discountRate}%</span>}
+                  <TableRow key={item.variantId} className="border-b border-border hover:bg-transparent last:border-0">
+                    <TableCell className="px-6 py-4">
+                      <div className="text-[10px] font-bold uppercase tracking-widest leading-relaxed">{item.name}</div>
+                      <div className="mt-1 text-[9px] font-mono text-muted-foreground uppercase">
+                        {item.variantName} · @{formatCurrency(item.price)}
                       </div>
                     </TableCell>
-                    <TableCell className="text-center font-bold">{item.quantity}</TableCell>
-                    <TableCell className="text-right font-extrabold text-foreground">
+                    <TableCell className="text-center font-mono text-[10px] font-bold">{item.quantity}</TableCell>
+                    <TableCell className="px-6 text-right font-mono text-[10px] font-bold">
                       {formatCurrency((item.price - item.discountAmount) * item.quantity)}
                     </TableCell>
                   </TableRow>
@@ -769,44 +849,52 @@ const POS: React.FC = () => {
             </Table>
           </div>
 
-          <div className="mb-4 grid gap-1 text-sm">
-            <div className="flex justify-between text-muted-foreground">
-              <span>Subtotal</span>
-              <span>{formatCurrency(totals.subtotal)}</span>
+          <div className="space-y-4 border border-border bg-muted/20 p-8">
+            <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+              <span>Gross_Subtotal</span>
+              <span className="text-foreground">{formatCurrency(totals.subtotal)}</span>
             </div>
             {totals.discount > 0 && (
-              <div className="flex justify-between text-green-600">
-                <span>Diskon</span>
+              <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest text-green-600">
+                <span>Total_Adjustment</span>
                 <span>-{formatCurrency(totals.discount)}</span>
               </div>
             )}
-            <div className="mt-1 flex justify-between border-t pt-3 text-lg font-extrabold text-foreground">
-              <span>Total Bayar</span>
-              <span>{formatCurrency(totals.total)}</span>
+            <div className="flex items-baseline justify-between border-t border-border pt-6">
+              <span className="text-[10px] font-bold uppercase tracking-[0.2em]">Net_Settlement</span>
+              <span className="text-3xl font-bold tracking-tighter text-primary">{formatCurrency(totals.total)}</span>
             </div>
           </div>
 
-          <div className="flex justify-end gap-3">
+          <div className="flex gap-4">
             <Button
-              type="button"
               variant="outline"
-              className="rounded-none"
+              className="flex-1 h-12 rounded-none border-border text-[10px] font-bold uppercase tracking-widest transition-all hover:border-foreground"
               onClick={() => setShowCheckoutConfirm(false)}
               disabled={checkoutMutation.isPending}
             >
-              Cek Lagi
+              Abort_Operation
             </Button>
             <Button
-              type="button"
               onClick={() => checkoutMutation.mutate()}
               disabled={checkoutMutation.isPending || cart.length === 0}
-              className="rounded-none bg-green-600 hover:bg-green-700"
+              className="flex-[2] h-12 rounded-none bg-foreground text-[10px] font-bold uppercase tracking-[0.2em] text-background hover:bg-muted-foreground transition-all"
             >
-              {checkoutMutation.isPending ? 'Memproses...' : 'Konfirmasi Bayar'}
+              {checkoutMutation.isPending ? 'PROCESSING...' : 'EXECUTE_SETTLEMENT'}
             </Button>
           </div>
         </div>
       </Modal>
+
+      <ConfirmDialog
+        isOpen={isLogoutDialogOpen}
+        onConfirm={logout}
+        onCancel={() => setIsLogoutDialogOpen(false)}
+        title="SESSION_TERMINATION"
+        message="REQUESTING PERMISSION TO TERMINATE CURRENT OPERATOR SESSION. DATA BUFFERS WILL BE PERSISTED."
+        confirmLabel="AUTHORIZE_LOGOUT"
+        confirmDanger
+      />
     </div>
   );
 };

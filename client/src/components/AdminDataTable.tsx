@@ -1,7 +1,6 @@
 import React, { useMemo, useState } from 'react';
-import { ChevronLeft, ChevronRight, ChevronsUpDown, Search } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ChevronsUpDown, Search, Database } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -52,8 +51,8 @@ function AdminDataTable<T>({
   getRowKey,
   isLoading = false,
   actions,
-  emptyText = 'Tidak ada data',
-  searchPlaceholder = 'Cari data...',
+  emptyText = 'BUFFER_EMPTY',
+  searchPlaceholder = 'QUERY_RESOURCES...',
   onRowClick,
   renderExpandedRow,
   isRowExpanded,
@@ -114,37 +113,44 @@ function AdminDataTable<T>({
   };
 
   return (
-    <Card className="overflow-hidden">
-      <div className="flex flex-col gap-3 border-b px-4 py-3 md:flex-row md:items-center md:justify-between">
-        <div>
-          <h2 className="text-base font-semibold text-foreground">{title}</h2>
-          <p className="mt-0.5 text-xs text-muted-foreground">
-            {filteredData.length} dari {data.length} data
-          </p>
+    <div className="border border-border bg-card">
+      <div className="flex flex-col gap-6 border-b border-border p-8 md:flex-row md:items-end md:justify-between">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+            <Database className="size-3" />
+            <span>RESOURCE_DATA_TABLE</span>
+          </div>
+          <h2 className="text-xl font-bold uppercase tracking-tighter">{title.replace(' ', '_')}</h2>
+          <div className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground">
+            {filteredData.length.toString().padStart(3, '0')} / {data.length.toString().padStart(3, '0')} ENTRIES_INDEXED
+          </div>
         </div>
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-          <div className="relative w-full sm:w-[240px]">
-            <Search className="absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+        
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
+          <div className="relative group">
+            <Search className="absolute left-0 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground transition-colors group-focus-within:text-foreground" />
             <Input
               value={search}
               onChange={e => { setSearch(e.target.value); setPage(1); }}
-              placeholder={searchPlaceholder}
-              className="pl-8"
+              placeholder={searchPlaceholder.toUpperCase()}
+              className="h-10 w-full sm:w-64 border-0 border-b border-border bg-transparent pl-6 text-[10px] font-bold uppercase tracking-widest placeholder:text-muted-foreground/50 focus-visible:ring-0 focus-visible:border-foreground rounded-none transition-all"
             />
           </div>
-          {actions}
+          <div className="flex bg-border border border-border">
+            {actions}
+          </div>
         </div>
       </div>
 
-      <div>
+      <div className="overflow-x-auto">
         <Table>
           <TableHeader>
-            <TableRow className="bg-muted/60 hover:bg-muted/60">
+            <TableRow className="bg-muted/50 hover:bg-muted/50 border-b border-border">
               {columns.map(column => (
                 <TableHead
                   key={column.key}
                   className={cn(
-                    'whitespace-nowrap',
+                    'h-12 px-6 text-[10px] font-bold uppercase tracking-widest text-muted-foreground whitespace-nowrap',
                     alignClass[column.align || 'left'],
                   )}
                   style={{ width: column.width }}
@@ -154,12 +160,12 @@ function AdminDataTable<T>({
                     onClick={() => changeSort(column.key)}
                     disabled={!column.sortValue}
                     className={cn(
-                      'inline-flex items-center gap-1 bg-transparent p-0 text-inherit',
+                      'inline-flex items-center gap-1.5 bg-transparent p-0 text-inherit transition-colors',
                       column.sortValue ? 'cursor-pointer hover:text-foreground' : 'cursor-default',
                     )}
                   >
-                    {column.header}
-                    {column.sortValue && <ChevronsUpDown className="size-3" />}
+                    {column.header.toUpperCase().replace(' ', '_')}
+                    {column.sortValue && <ChevronsUpDown className="size-3 opacity-50" />}
                   </button>
                 </TableHead>
               ))}
@@ -167,19 +173,33 @@ function AdminDataTable<T>({
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              <TableRow><TableCell colSpan={columns.length} className="py-8 text-center text-muted-foreground">Loading...</TableCell></TableRow>
+              <TableRow>
+                <TableCell colSpan={columns.length} className="py-20 text-center text-[10px] font-bold uppercase tracking-widest text-muted-foreground animate-pulse">
+                  SCANNING_SYSTEM_RESOURCES...
+                </TableCell>
+              </TableRow>
             ) : visibleData.length === 0 ? (
-              <TableRow><TableCell colSpan={columns.length} className="py-8 text-center text-muted-foreground">{emptyText}</TableCell></TableRow>
-            ) : visibleData.map(row => (
+              <TableRow>
+                <TableCell colSpan={columns.length} className="py-20 text-center text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                  {emptyText.toUpperCase().replace(' ', '_')}
+                </TableCell>
+              </TableRow>
+            ) : visibleData.map((row, idx) => (
               <React.Fragment key={getRowKey(row)}>
                 <TableRow
                   onClick={() => onRowClick?.(row)}
-                  className={cn(onRowClick && 'cursor-pointer')}
+                  className={cn(
+                    'border-b border-border last:border-0 hover:bg-muted/20 transition-colors',
+                    onRowClick && 'cursor-pointer'
+                  )}
                 >
                   {columns.map(column => (
                     <TableCell
                       key={column.key}
-                      className={cn(alignClass[column.align || 'left'])}
+                      className={cn(
+                        'px-6 py-4 text-[11px] font-bold uppercase tracking-tight',
+                        alignClass[column.align || 'left']
+                      )}
                     >
                       {column.render(row)}
                     </TableCell>
@@ -187,8 +207,10 @@ function AdminDataTable<T>({
                 </TableRow>
                 {isRowExpanded?.(row) && renderExpandedRow && (
                   <TableRow className="hover:bg-transparent">
-                    <TableCell colSpan={columns.length} className="bg-muted/30 pb-3">
-                      {renderExpandedRow(row)}
+                    <TableCell colSpan={columns.length} className="bg-muted/10 p-8 border-b border-border">
+                      <div className="border border-border bg-card p-6">
+                        {renderExpandedRow(row)}
+                      </div>
                     </TableCell>
                   </TableRow>
                 )}
@@ -198,44 +220,51 @@ function AdminDataTable<T>({
         </Table>
       </div>
 
-      <div className="flex flex-col gap-3 border-t bg-muted/40 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <span>Baris</span>
-          <Select value={String(pageSize)} onValueChange={value => { setPageSize(Number(value)); setPage(1); }}>
-            <SelectTrigger className="h-8 w-20">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {pageSizes.map(size => <SelectItem key={size} value={String(size)}>{size}</SelectItem>)}
-            </SelectContent>
-          </Select>
-          <span>
-            {sortedData.length === 0 ? '0' : startIndex + 1}-{Math.min(startIndex + pageSize, sortedData.length)} dari {sortedData.length}
+      <div className="flex flex-col gap-6 border-t border-border bg-muted/10 p-8 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-6 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+          <div className="flex items-center gap-2">
+            <span>PER_PAGE:</span>
+            <Select value={String(pageSize)} onValueChange={value => { setPageSize(Number(value)); setPage(1); }}>
+              <SelectTrigger className="h-8 w-20 rounded-none border-border bg-background text-[10px] font-bold">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="rounded-none border-border">
+                {pageSizes.map(size => <SelectItem key={size} value={String(size)} className="text-[10px] font-bold">{size}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <span className="font-mono">
+            BLOCK: {sortedData.length === 0 ? '000' : (startIndex + 1).toString().padStart(3, '0')}-{Math.min(startIndex + pageSize, sortedData.length).toString().padStart(3, '0')} / {sortedData.length.toString().padStart(3, '0')}
           </span>
         </div>
-        <div className="flex items-center gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            size="icon"
-            onClick={() => setPage(prev => Math.max(1, prev - 1))}
-            disabled={safePage <= 1}
-          >
-            <ChevronLeft className="size-4" />
-          </Button>
-          <span className="min-w-20 text-center text-xs text-muted-foreground">Hal {safePage} / {totalPages}</span>
-          <Button
-            type="button"
-            variant="outline"
-            size="icon"
-            onClick={() => setPage(prev => Math.min(totalPages, prev + 1))}
-            disabled={safePage >= totalPages}
-          >
-            <ChevronRight className="size-4" />
-          </Button>
+        
+        <div className="flex items-center gap-4">
+          <div className="flex bg-border border border-border">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setPage(prev => Math.max(1, prev - 1))}
+              disabled={safePage <= 1}
+              className="h-9 w-12 rounded-none bg-card hover:bg-muted"
+            >
+              <ChevronLeft className="size-4" />
+            </Button>
+            <div className="flex items-center bg-card px-6 text-[10px] font-bold uppercase tracking-widest border-x border-border">
+              Page_{safePage.toString().padStart(2, '0')} / {totalPages.toString().padStart(2, '0')}
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setPage(prev => Math.min(totalPages, prev + 1))}
+              disabled={safePage >= totalPages}
+              className="h-9 w-12 rounded-none bg-card hover:bg-muted"
+            >
+              <ChevronRight className="size-4" />
+            </Button>
+          </div>
         </div>
       </div>
-    </Card>
+    </div>
   );
 }
 

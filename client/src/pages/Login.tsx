@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import api from '../api/api';
 import { getErrorMessage } from '../utils/error';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
@@ -33,62 +32,75 @@ const Login: React.FC = () => {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-muted/40 px-4">
-      <div className="flex w-full max-w-sm flex-col gap-6">
-        <Card className="border-none shadow-lg">
-          <CardHeader className="space-y-1 text-center">
-            <CardTitle className="text-2xl font-bold tracking-tight">Cafe POS</CardTitle>
-            <CardDescription className="text-muted-foreground">
-              Masuk dengan akun kasir atau admin Anda
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleLogin} className="grid gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="username">Username</Label>
-                <Input
-                  id="username"
-                  placeholder="admin"
-                  type="text"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  required
-                  disabled={loading}
-                  autoComplete="username"
-                  className="bg-muted/50"
-                />
+    <div className="flex min-h-screen items-center justify-center bg-background px-4 font-sans antialiased">
+      <div className="w-full max-w-sm border border-border bg-card shadow-sm">
+        <div className="border-b border-border px-8 py-6">
+          <div className="flex items-center justify-between">
+            <h1 className="text-xl font-bold uppercase tracking-widest">CAFE POS</h1>
+            <span className="text-[10px] font-mono text-muted-foreground uppercase">v1.0.0</span>
+          </div>
+          <p className="mt-2 text-xs font-medium uppercase tracking-tight text-muted-foreground">
+            Precision Systems / Authentication
+          </p>
+        </div>
+        
+        <div className="px-8 py-8">
+          <form onSubmit={handleLogin} className="grid gap-6">
+            <div className="grid gap-2">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="username" className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                  User Account
+                </Label>
+                <span className="text-[10px] font-mono text-muted-foreground">01</span>
               </div>
+              <Input
+                id="username"
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                required
+                disabled={loading}
+                autoComplete="username"
+                className="h-11 rounded-none border-border bg-background focus-visible:ring-0 focus-visible:border-foreground transition-colors"
+              />
+            </div>
 
-              <div className="grid gap-2">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="password">Password</Label>
-                </div>
-                <Input
-                  id="password"
-                  placeholder="••••••••"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  disabled={loading}
-                  autoComplete="current-password"
-                  className="bg-muted/50"
-                />
+            <div className="grid gap-2">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="password" className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                  Secure Access
+                </Label>
+                <span className="text-[10px] font-mono text-muted-foreground">02</span>
               </div>
+              <Input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                disabled={loading}
+                autoComplete="current-password"
+                className="h-11 rounded-none border-border bg-background focus-visible:ring-0 focus-visible:border-foreground transition-colors"
+              />
+            </div>
 
-              <Button type="submit" disabled={loading} className="mt-2 w-full font-semibold">
-                {loading ? (
-                  <span className="flex items-center gap-2">
-                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                    Memproses...
-                  </span>
-                ) : (
-                  'Login'
-                )}
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
+            <Button 
+              type="submit" 
+              disabled={loading} 
+              variant="outline"
+              className="mt-4 h-11 rounded-none border-foreground bg-foreground text-background hover:bg-background hover:text-foreground font-bold uppercase tracking-widest transition-all"
+            >
+              {loading ? 'Processing...' : 'Authorize Login'}
+            </Button>
+          </form>
+        </div>
+        
+        <div className="border-t border-border px-8 py-4 bg-muted/30">
+          <div className="flex items-center justify-between text-[10px] font-mono text-muted-foreground uppercase tracking-widest">
+            <span>Terminal: 001</span>
+            <span>Status: Ready</span>
+          </div>
+        </div>
       </div>
     </div>
   );

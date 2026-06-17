@@ -65,7 +65,7 @@ const App: React.FC = () => {
           </Routes>
         </Suspense>
       </Router>
-      <Toaster position="top-right" richColors />
+      <Toaster position="top-right" />
     </QueryClientProvider>
   );
 };
